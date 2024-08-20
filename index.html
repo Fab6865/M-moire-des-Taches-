@@ -1,0 +1,454 @@
+<html><head><base href="https://m-comme.com/wp-content/uploads/2018/11/1.jpg%20logo%20de%20l'application%20*">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mémoire des Tâches Avancée - Gestion Complète avec Éditeur de Boutique</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f8ff;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .container {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    padding: 20px;
+    width: 90%;
+    max-width: 800px;
+  }
+  h1, h2 {
+    color: #4a4a4a;
+    text-align: center;
+  }
+  #task-form, #reward-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  input[type="text"], input[type="number"], input[type="date"], select {
+    flex-grow: 1;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  button {
+    padding: 10px 15px;
+    font-size: 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  #task-list, #completed-task-list, #reward-list {
+    list-style-type: none;
+    padding: 0;
+  }
+  .task-item, .reward-item {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .task-item button, .reward-item button {
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-left: 5px;
+  }
+  #points-display {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  #shop {
+    margin-top: 20px;
+  }
+  .task-dates {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 5px;
+    width: 100%;
+  }
+  .negative-points {
+    color: red;
+  }
+  #menu-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .menu-button {
+    padding: 10px 15px;
+    font-size: 16px;
+    background-color: #008CBA;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  #completed-tasks, #shop-editor {
+    display: none;
+  }
+  #logo {
+    width: 100px;
+    height: auto;
+    margin: 0 auto 20px;
+    display: block;
+  }
+  .completed-on-time {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+  }
+  .completed-late {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <img id="logo" src="https://m-comme.com/wp-content/uploads/2018/11/1.jpg" alt="Logo de l'application, un M stylisé en blanc sur fond bleu" width="100" height="100">
+    <h1>Mémoire des Tâches Avancée</h1>
+    <div id="points-display">Points: 0</div>
+    <div id="menu-buttons">
+      <button class="menu-button" onclick="showSection('active-tasks')">Tâches Actives</button>
+      <button class="menu-button" onclick="showSection('completed-tasks')">Tâches Terminées</button>
+      <button class="menu-button" onclick="showSection('shop')">Boutique</button>
+      <button class="menu-button" onclick="showSection('shop-editor')">Éditeur de Boutique</button>
+    </div>
+    <div id="active-tasks">
+      <form id="task-form">
+        <input type="text" id="task-input" placeholder="Ajouter une nouvelle tâche" required>
+        <input type="date" id="created-date" required>
+        <input type="date" id="due-date" required>
+        <select id="priority-select">
+          <option value="1">Peu urgent</option>
+          <option value="2">Moyennement urgent</option>
+          <option value="3">Très urgent</option>
+        </select>
+        <button type="submit" id="add-task">Ajouter</button>
+      </form>
+      <ul id="task-list"></ul>
+    </div>
+    <div id="completed-tasks">
+      <h2>Tâches Terminées</h2>
+      <ul id="completed-task-list"></ul>
+    </div>
+    <div id="shop">
+      <h2>Boutique de Récompenses</h2>
+      <ul id="reward-list"></ul>
+    </div>
+    <div id="shop-editor">
+      <h2>Éditeur de Boutique</h2>
+      <form id="reward-form">
+        <input type="text" id="reward-name" placeholder="Nom de la récompense" required>
+        <input type="number" id="reward-cost" placeholder="Coût en points" required min="1">
+        <button type="submit">Ajouter Récompense</button>
+      </form>
+      <ul id="editable-reward-list"></ul>
+    </div>
+  </div>
+
+  <script>
+    let tasks = [];
+    let completedTasks = [];
+    let points = 0;
+    let rewards = [];
+
+    const taskForm = document.getElementById('task-form');
+    const taskInput = document.getElementById('task-input');
+    const createdDateInput = document.getElementById('created-date');
+    const dueDateInput = document.getElementById('due-date');
+    const prioritySelect = document.getElementById('priority-select');
+    const taskList = document.getElementById('task-list');
+    const completedTaskList = document.getElementById('completed-task-list');
+    const pointsDisplay = document.getElementById('points-display');
+    const rewardForm = document.getElementById('reward-form');
+    const rewardNameInput = document.getElementById('reward-name');
+    const rewardCostInput = document.getElementById('reward-cost');
+    const rewardList = document.getElementById('reward-list');
+    const editableRewardList = document.getElementById('editable-reward-list');
+
+    // Set default date values
+    const today = new Date().toISOString().split('T')[0];
+    createdDateInput.value = today;
+    dueDateInput.value = today;
+
+    // Load saved data
+    loadSavedData();
+
+    taskForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      addTask();
+    });
+
+    rewardForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      addReward();
+    });
+
+    function addTask() {
+      const taskText = taskInput.value.trim();
+      const priority = parseInt(prioritySelect.value);
+      const createdDate = new Date(createdDateInput.value);
+      const dueDate = new Date(dueDateInput.value);
+      
+      if (taskText && !isNaN(createdDate) && !isNaN(dueDate)) {
+        const task = { 
+          text: taskText, 
+          priority: priority,
+          createdDate: createdDate,
+          dueDate: dueDate,
+          completed: false
+        };
+        tasks.push(task);
+        taskInput.value = '';
+        updateTaskList();
+        saveData();
+      }
+    }
+
+    function updateTaskList() {
+      tasks.sort((a, b) => b.priority - a.priority);
+      taskList.innerHTML = '';
+      tasks.forEach((task, index) => {
+        const li = document.createElement('li');
+        li.className = 'task-item';
+        li.innerHTML = `
+          <span>${task.text} (Priorité: ${task.priority})</span>
+          <div>
+            <button onclick="completeTask(${index})">Terminer</button>
+            <button onclick="deleteTask(${index})">Supprimer</button>
+          </div>
+          <div class="task-dates">
+            Créée le: ${task.createdDate.toLocaleDateString()}<br>
+            À faire pour le: ${task.dueDate.toLocaleDateString()}
+          </div>
+        `;
+        taskList.appendChild(li);
+      });
+    }
+
+    function updateCompletedTaskList() {
+      completedTaskList.innerHTML = '';
+      completedTasks.forEach((task, index) => {
+        const li = document.createElement('li');
+        li.className = 'task-item';
+        if (isSameDay(task.completionDate, task.dueDate) || task.completionDate <= task.dueDate) {
+          li.classList.add('completed-on-time');
+        } else {
+          li.classList.add('completed-late');
+        }
+        li.innerHTML = `
+          <span>${task.text} (Priorité: ${task.priority})</span>
+          <div>
+            <button onclick="deleteCompletedTask(${index})">Supprimer</button>
+          </div>
+          <div class="task-dates">
+            Créée le: ${task.createdDate.toLocaleDateString()}<br>
+            Terminée le: ${task.completionDate.toLocaleDateString()}<br>
+            Échéance: ${task.dueDate.toLocaleDateString()}
+          </div>
+        `;
+        completedTaskList.appendChild(li);
+      });
+    }
+
+    function completeTask(index) {
+      const task = tasks[index];
+      const completionDate = new Date();
+      task.completed = true;
+      task.completionDate = completionDate;
+
+      let pointsEarned = task.priority;
+
+      if (isSameDay(completionDate, task.dueDate) || completionDate <= task.dueDate) {
+        alert(`Tâche terminée à temps. Vous gagnez ${pointsEarned} points.`);
+      } else {
+        const daysLate = Math.ceil((completionDate - task.dueDate) / (1000 * 60 * 60 * 24));
+        const penaltyPoints = daysLate * task.priority;
+        pointsEarned = -penaltyPoints;
+        alert(`Tâche terminée en retard. Vous perdez ${penaltyPoints} points.`);
+      }
+
+      points += pointsEarned;
+      completedTasks.push(task);
+      tasks.splice(index, 1);
+      updateTaskList();
+      updateCompletedTaskList();
+      updatePoints();
+      saveData();
+    }
+
+    function isSameDay(date1, date2) {
+      return date1.getFullYear() === date2.getFullYear() &&
+             date1.getMonth() === date2.getMonth() &&
+             date1.getDate() === date2.getDate();
+    }
+
+    function deleteTask(index) {
+      const task = tasks[index];
+      task.completed = true;
+      task.completionDate = new Date();
+      completedTasks.push(task);
+      tasks.splice(index, 1);
+      updateTaskList();
+      updateCompletedTaskList();
+      saveData();
+    }
+
+    function deleteCompletedTask(index) {
+      completedTasks.splice(index, 1);
+      updateCompletedTaskList();
+      saveData();
+    }
+
+    function updatePoints() {
+      pointsDisplay.textContent = `Points: ${points}`;
+      if (points < 0) {
+        pointsDisplay.classList.add('negative-points');
+      } else {
+        pointsDisplay.classList.remove('negative-points');
+      }
+    }
+
+    function addReward() {
+      const rewardName = rewardNameInput.value.trim();
+      const rewardCost = parseInt(rewardCostInput.value);
+      
+      if (rewardName && !isNaN(rewardCost) && rewardCost > 0) {
+        const reward = { name: rewardName, cost: rewardCost };
+        rewards.push(reward);
+        rewardNameInput.value = '';
+        rewardCostInput.value = '';
+        updateRewardLists();
+        saveData();
+      }
+    }
+
+    function updateRewardLists() {
+      rewardList.innerHTML = '';
+      editableRewardList.innerHTML = '';
+      rewards.forEach((reward, index) => {
+        // Update shop reward list
+        const shopLi = document.createElement('li');
+        shopLi.className = 'reward-item';
+        shopLi.innerHTML = `
+          <span>${reward.name} (${reward.cost} points)</span>
+          <button onclick="buyReward(${index})">Acheter</button>
+        `;
+        rewardList.appendChild(shopLi);
+
+        // Update editable reward list
+        const editableLi = document.createElement('li');
+        editableLi.className = 'reward-item';
+        editableLi.innerHTML = `
+          <span>${reward.name} (${reward.cost} points)</span>
+          <div>
+            <button onclick="editReward(${index})">Modifier</button>
+            <button onclick="deleteReward(${index})">Supprimer</button>
+          </div>
+        `;
+        editableRewardList.appendChild(editableLi);
+      });
+    }
+
+    function buyReward(index) {
+      const reward = rewards[index];
+      if (points >= reward.cost) {
+        points -= reward.cost;
+        updatePoints();
+        alert(`Félicitations ! Vous avez acheté : ${reward.name}. Votre nouveau solde est de ${points} points.`);
+      } else {
+        alert(`Désolé, vous n'avez pas assez de points pour acheter : ${reward.name}.`);
+      }
+      saveData();
+    }
+
+    function editReward(index) {
+      const reward = rewards[index];
+      const newName = prompt("Entrez le nouveau nom de la récompense:", reward.name);
+      const newCost = parseInt(prompt("Entrez le nouveau coût de la récompense:", reward.cost));
+      
+      if (newName && !isNaN(newCost) && newCost > 0) {
+        reward.name = newName;
+        reward.cost = newCost;
+        updateRewardLists();
+        saveData();
+      }
+    }
+
+    function deleteReward(index) {
+      if (confirm("Êtes-vous sûr de vouloir supprimer cette récompense ?")) {
+        rewards.splice(index, 1);
+        updateRewardLists();
+        saveData();
+      }
+    }
+
+    function showSection(sectionId) {
+      const sections = ['active-tasks', 'completed-tasks', 'shop', 'shop-editor'];
+      sections.forEach(id => {
+        document.getElementById(id).style.display = id === sectionId ? 'block' : 'none';
+      });
+    }
+
+    function saveData() {
+      const dataToSave = {
+        tasks: tasks,
+        completedTasks: completedTasks,
+        points: points,
+        rewards: rewards
+      };
+      localStorage.setItem('taskManagerData', JSON.stringify(dataToSave));
+    }
+
+    function loadSavedData() {
+      const savedData = localStorage.getItem('taskManagerData');
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        tasks = parsedData.tasks.map(task => ({
+          ...task,
+          createdDate: new Date(task.createdDate),
+          dueDate: new Date(task.dueDate)
+        }));
+        completedTasks = parsedData.completedTasks.map(task => ({
+          ...task,
+          createdDate: new Date(task.createdDate),
+          dueDate: new Date(task.dueDate),
+          completionDate: new Date(task.completionDate)
+        }));
+        points = parsedData.points;
+        rewards = parsedData.rewards || [];
+        updateTaskList();
+        updateCompletedTaskList();
+        updatePoints();
+        updateRewardLists();
+      }
+    }
+
+    // Initial update
+    updateTaskList();
+    updateCompletedTaskList();
+    updatePoints();
+    updateRewardLists();
+  </script>
+</body>
+</html>
